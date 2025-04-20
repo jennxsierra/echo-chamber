@@ -1,28 +1,38 @@
 package logger
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 )
 
-var logFile *os.File
+var serverLogFile *os.File
 
-// InitializeLogger sets up the log file
+// InitializeLogger sets up the server log file
 func InitializeLogger() error {
-	var err error
-	logFile, err = os.OpenFile("server.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// Create logs directory if it doesn't exist
+	logsDir := "logs"
+	err := os.MkdirAll(logsDir, 0755)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create logs directory: %v", err)
 	}
-	log.SetOutput(logFile)
+
+	// Create server log file
+	serverLogPath := filepath.Join(logsDir, fmt.Sprintf("server_%s.log", time.Now().Format("20060102_150405")))
+	serverLogFile, err = os.OpenFile(serverLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to create server log file: %v", err)
+	}
+	log.SetOutput(serverLogFile)
 	return nil
 }
 
-// CloseLogger closes the log file
+// CloseLogger closes the server log file
 func CloseLogger() {
-	if logFile != nil {
-		logFile.Close()
+	if serverLogFile != nil {
+		serverLogFile.Close()
 	}
 }
 
@@ -34,4 +44,25 @@ func LogConnection(clientAddr string) {
 // LogDisconnection logs when a client disconnects
 func LogDisconnection(clientAddr string) {
 	log.Printf("[%s] Client disconnected: %s\n", time.Now().Format(time.RFC3339), clientAddr)
+}
+
+// CreateClientLogger creates a log file for a specific client
+func CreateClientLogger(clientAddr string) (*log.Logger, *os.File, error) {
+	// Create logs directory if it doesn't exist
+	logsDir := "logs"
+	err := os.MkdirAll(logsDir, 0755)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create logs directory: %v", err)
+	}
+
+	// Create client log file
+	clientLogPath := filepath.Join(logsDir, fmt.Sprintf("client_%s.log", clientAddr))
+	clientLogFile, err := os.OpenFile(clientLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create client log file: %v", err)
+	}
+
+	// Create a logger for the client
+	clientLogger := log.New(clientLogFile, "", log.LstdFlags)
+	return clientLogger, clientLogFile, nil
 }
