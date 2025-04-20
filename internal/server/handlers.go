@@ -1,8 +1,11 @@
 package server
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net"
+	"strings"
 
 	"github.com/jennxsierra/echo-chamber/internal/logger"
 )
@@ -31,24 +34,39 @@ func handleConnection(conn net.Conn) {
 	)
 	conn.Write([]byte(welcomeMessage))
 
-	buf := make([]byte, 1024)
+	reader := bufio.NewReader(conn)
 	for {
 		conn.Write([]byte(fmt.Sprintf("[%s] ", clientAddr)))
-		n, err := conn.Read(buf)
+
+		// Read input from the client
+		clientMessage, err := reader.ReadString('\n')
 		if err != nil {
-			clientLogger.Printf("Error reading from client: %v", err)
+			if err == io.EOF {
+				// Client disconnected
+				clientLogger.Printf("Client [%s] disconnected.", clientAddr)
+				break
+			}
+			// Log unexpected errors and continue
+			clientLogger.Printf("Error reading from client [%s]: %v", clientAddr, err)
 			break
 		}
 
-		clientMessage := string(buf[:n])
+		// Trim whitespace and handle the message
+		clientMessage = strings.TrimSpace(clientMessage)
 		clientLogger.Printf("[SENT] [%s] %s", clientAddr, clientMessage)
 
-		// Echo the message back to the client with the server's nametag
+		// Echo the message back to the client
 		serverResponse := fmt.Sprintf("[Echo Chamber] %s\n", clientMessage)
-		conn.Write([]byte(serverResponse))
+		_, writeErr := conn.Write([]byte(serverResponse))
+		if writeErr != nil {
+			clientLogger.Printf("Error writing to client [%s]: %v", clientAddr, writeErr)
+			break
+		}
 		clientLogger.Printf("[RECEIVED] %s", serverResponse)
 
+		// Handle client exit commands
 		if clientMessage == "bye" || clientMessage == "/quit" {
+			clientLogger.Printf("Client [%s] requested to disconnect.", clientAddr)
 			break
 		}
 	}
