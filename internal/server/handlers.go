@@ -70,37 +70,36 @@ func handleConnection(conn net.Conn) {
 
 		clientMessage = strings.TrimSpace(clientMessage)
 
-		// Validate message length (reject messages that are too long)
+		// Check for custom personality commands.
+		if response, disconnect, handled := HandlePersonalityCommand(clientMessage); handled {
+			// Log the command and its response.
+			clientLogger.Printf("[SENT] [%s] %s", clientAddr, clientMessage)
+			clientLogger.Printf("[RECEIVED] %s", response)
+
+			// Handle the command response.
+			conn.Write([]byte(response))
+			// If the command indicates a disconnect, close the connection.
+			if disconnect {
+				// Delay before closing to ensure the goodbye message is sent.
+				time.Sleep(100 * time.Millisecond)
+				if tcpConn, ok := conn.(*net.TCPConn); ok {
+					tcpConn.SetLinger(0)
+				}
+				break
+			}
+			// Continue without further processing if the command is handled.
+			continue
+		}
+
+		// Validate and format the message.
 		validatedMessage, err := ValidateMessage(clientMessage)
 		if err != nil {
 			clientLogger.Printf("Rejected message from [%s]: %v\n\n", clientAddr, err)
-			conn.Write([]byte("Error: message too long. Maximum allowed is 1024 bytes.\n\n"))
-			continue // Skip processing this message.
+			conn.Write([]byte("Error: " + err.Error() + "\n\n"))
+			continue
 		}
-
+		// Log the validated message.
 		clientLogger.Printf("[SENT] [%s] %s", clientAddr, validatedMessage)
-
-		// Handle client exit commands.
-		if clientMessage == "bye" || clientMessage == "/quit" {
-			goodbyeMessage := "[Echo Chamber] Goodbye!\n\n"
-			clientLogger.Printf("[RECEIVED] %s", goodbyeMessage)
-			clientLogger.Printf("Client [%s] has exited the Echo Chamber.", clientAddr)
-
-			// Send the goodbye message.
-			_, err := conn.Write([]byte(goodbyeMessage))
-			if err != nil {
-				clientLogger.Printf("Error sending goodbye message to [%s]: %v", clientAddr, err)
-			}
-
-			if tcpConn, ok := conn.(*net.TCPConn); ok {
-				tcpConn.CloseWrite()
-				// Allow time for the goodbye message to be transmitted.
-				time.Sleep(100 * time.Millisecond)
-				// Now force an immediate disconnect to end netcat without extra input.
-				tcpConn.SetLinger(0)
-			}
-			break
-		}
 
 		// Echo the message back to the client.
 		serverResponse := fmt.Sprintf("[Echo Chamber] %s\n\n", clientMessage)
