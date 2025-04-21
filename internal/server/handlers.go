@@ -60,7 +60,7 @@ func handleConnection(conn net.Conn) {
 				}
 				clientLogger.Print(timeoutMsg)
 			} else if err == io.EOF || strings.Contains(err.Error(), "closed") {
-				// Handle client disconnection gracefully.
+				// Handle client
 				clientLogger.Printf("Client [%s] disconnected.", clientAddr)
 			} else {
 				clientLogger.Printf("Error reading from client [%s]: %v", clientAddr, err)
@@ -69,11 +69,20 @@ func handleConnection(conn net.Conn) {
 		}
 
 		clientMessage = strings.TrimSpace(clientMessage)
-		clientLogger.Printf("[SENT] [%s] %s", clientAddr, clientMessage)
+
+		// Validate message length (reject messages that are too long)
+		validatedMessage, err := ValidateMessage(clientMessage)
+		if err != nil {
+			clientLogger.Printf("Rejected message from [%s]: %v\n\n", clientAddr, err)
+			conn.Write([]byte("Error: message too long. Maximum allowed is 1024 bytes.\n\n"))
+			continue // Skip processing this message.
+		}
+
+		clientLogger.Printf("[SENT] [%s] %s", clientAddr, validatedMessage)
 
 		// Handle client exit commands.
 		if clientMessage == "bye" || clientMessage == "/quit" {
-			goodbyeMessage := "[Echo Chamber] Goodbye!\n"
+			goodbyeMessage := "[Echo Chamber] Goodbye!\n\n"
 			clientLogger.Printf("[RECEIVED] %s", goodbyeMessage)
 			clientLogger.Printf("Client [%s] has exited the Echo Chamber.", clientAddr)
 
@@ -94,7 +103,7 @@ func handleConnection(conn net.Conn) {
 		}
 
 		// Echo the message back to the client.
-		serverResponse := fmt.Sprintf("[Echo Chamber] %s\n", clientMessage)
+		serverResponse := fmt.Sprintf("[Echo Chamber] %s\n\n", clientMessage)
 		_, writeErr := conn.Write([]byte(serverResponse))
 		if writeErr != nil {
 			clientLogger.Printf("Error writing to client [%s]: %v", clientAddr, writeErr)
