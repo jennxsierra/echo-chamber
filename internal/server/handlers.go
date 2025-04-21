@@ -55,6 +55,17 @@ func handleConnection(conn net.Conn) {
 		clientMessage = strings.TrimSpace(clientMessage)
 		clientLogger.Printf("[SENT] [%s] %s", clientAddr, clientMessage)
 
+		// Handle client exit commands
+		if clientMessage == "bye" || clientMessage == "/quit" {
+			clientLogger.Printf("Client [%s] disconnected.", clientAddr)
+
+			// Send a goodbye message to the client before disconnecting
+			goodbyeMessage := "[Echo Chamber] Goodbye!\n"
+			conn.Write([]byte(goodbyeMessage))
+
+			return // Exit the loop
+		}
+
 		// Echo the message back to the client
 		serverResponse := fmt.Sprintf("[Echo Chamber] %s\n", clientMessage)
 		_, writeErr := conn.Write([]byte(serverResponse))
@@ -63,11 +74,5 @@ func handleConnection(conn net.Conn) {
 			break
 		}
 		clientLogger.Printf("[RECEIVED] %s", serverResponse)
-
-		// Handle client exit commands
-		if clientMessage == "bye" || clientMessage == "/quit" {
-			clientLogger.Printf("Client [%s] requested to disconnect.", clientAddr)
-			break
-		}
 	}
 }
