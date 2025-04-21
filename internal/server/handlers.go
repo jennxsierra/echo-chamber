@@ -70,10 +70,10 @@ func handleConnection(conn net.Conn) {
 
 		clientMessage = strings.TrimSpace(clientMessage)
 
-		// Check for custom personality commands.
-		if response, disconnect, handled := HandlePersonalityCommand(clientMessage); handled {
+		// Check if the message is a command (prefixed with "/")
+		if response, disconnect, handled := ProcessCommand(clientMessage, conn); handled {
 			// Log the command and its response.
-			clientLogger.Printf("[SENT] [%s] %s", clientAddr, clientMessage)
+			clientLogger.Printf("[SENT] [%s]: %s", clientAddr, clientMessage)
 			clientLogger.Printf("[RECEIVED] %s", response)
 
 			// Handle the command response.
@@ -83,6 +83,24 @@ func handleConnection(conn net.Conn) {
 				// Log client exit before the connection is closed.
 				clientLogger.Printf("Client [%s] has exited the Echo Chamber.", clientAddr)
 				// Delay before closing to ensure the goodbye message is printed to terminal.
+				time.Sleep(100 * time.Millisecond)
+				if tcpConn, ok := conn.(*net.TCPConn); ok {
+					tcpConn.SetLinger(0)
+				}
+				break
+			}
+			continue
+		}
+
+		// Check for custom personality commands.
+		if response, disconnect, handled := HandlePersonalityCommand(clientMessage); handled {
+			// Log the command and its response.
+			clientLogger.Printf("[SENT] [%s] %s", clientAddr, clientMessage)
+			clientLogger.Printf("[RECEIVED] %s", response)
+
+			conn.Write([]byte(response))
+			if disconnect {
+				clientLogger.Printf("Client [%s] has exited the Echo Chamber.", clientAddr)
 				time.Sleep(100 * time.Millisecond)
 				if tcpConn, ok := conn.(*net.TCPConn); ok {
 					tcpConn.SetLinger(0)
