@@ -4,7 +4,7 @@ A TCP echo server written in Go that reflects client messages with a twist. It n
 
 > [!TIP]
 >
-> Watch a demo of echo-chamber in action on [YouTube](https://youtu.be/DemoVideoID).
+> Watch a demo of echo-chamber in action on [YouTube](https://youtu.be/xQwR_U2Ptlw).
 
 ## Table of Contents
 
