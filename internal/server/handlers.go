@@ -80,7 +80,9 @@ func handleConnection(conn net.Conn) {
 			conn.Write([]byte(response))
 			// If the command indicates a disconnect, close the connection.
 			if disconnect {
-				// Delay before closing to ensure the goodbye message is sent.
+				// Log client exit before the connection is closed.
+				clientLogger.Printf("Client [%s] has exited the Echo Chamber.", clientAddr)
+				// Delay before closing to ensure the goodbye message is printed to terminal.
 				time.Sleep(100 * time.Millisecond)
 				if tcpConn, ok := conn.(*net.TCPConn); ok {
 					tcpConn.SetLinger(0)

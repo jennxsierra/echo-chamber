@@ -12,7 +12,7 @@ type CommandAction struct {
 var personalityResponses = map[string]CommandAction{
 	"hello": {Response: "[Echo Chamber] Hi there!\n\n", DisconnectAfter: false},
 	"":      {Response: "[Echo Chamber] Say something...\n\n", DisconnectAfter: false},
-	"bye":   {Response: "[Echo Chamber] Goodbye!\n\n", DisconnectAfter: true},
+	"bye":   {Response: "[Echo Chamber] Goodbye!\n", DisconnectAfter: true},
 }
 
 // HandlePersonalityCommand checks if a message is a custom personality command.
