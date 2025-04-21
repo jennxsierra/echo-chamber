@@ -27,6 +27,14 @@ var commandHandlers = map[string]CommandHandler{
 		}
 		return strings.Join(args, " ") + "\n\n", false
 	},
+	"help": func(args []string, conn net.Conn) (string, bool) {
+		helpText := "[Echo Chamber] Available commands:\n" +
+			"/time  - Show the current server time.\n" +
+			"/quit  - Close the connection.\n" +
+			"/echo  - Echo back your message. Usage: /echo message\n" +
+			"/help  - Show this help message.\n\n"
+		return helpText, false
+	},
 }
 
 // ProcessCommand checks if the input is a command (starts with "/") and,
@@ -50,7 +58,7 @@ func ProcessCommand(input string, conn net.Conn) (string, bool, bool) {
 	handler, exists := commandHandlers[cmdName]
 	if !exists {
 		// Return a clear error message for unknown commands.
-		return "Unknown command. Please try again.\n", false, true
+		return "[Echo Chamber] Unknown command. Please try again.\n\n", false, true
 	}
 
 	response, disconnect := handler(args, conn)
